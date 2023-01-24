@@ -9,32 +9,65 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("Data Lake Storage Account", "storageaccount")
-dbutils.widgets.text("Data Lake Storage Container", "container")
-dbutils.widgets.text("Data Lake Storage Directory", "directory")
+# MAGIC %md ###### Input Details
 
-dbutils.widgets.dropdown("Data Type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"])
+# COMMAND ----------
+
+# Data Lake Location
+dbutils.widgets.text("storage_account", "storageaccount", "Data Lake Storage Account")
+dbutils.widgets.text("container", "container","Data Lake Storage Container")
+dbutils.widgets.text("directory", "directory", "Data Lake Storage Directory")
+dbutils.widgets.dropdown("data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type")
+
+# Profiling Settings
+dbutils.widgets.dropdown("minimal_mode", "True", ["True","False"], "Minimal Mode")
+
+# CSV Settings
+dbutils.widgets.dropdown("header", "True", ["True","False"], "Does CSV have header?")
+
+
+storage_account = dbutils.widgets.get("storage_account")
+container = dbutils.widgets.get("container")
+directory = dbutils.widgets.get("directory")
+data_type = dbutils.widgets.get("data_type")
+
+print(f"""
+Storage Account: {storage_account}
+Storage Container: {container}
+Storage Directory: {directory}
+Data Type: {data_type}
+""")
 
 
 # COMMAND ----------
 
 from pandas_profiling import ProfileReport
 
-sql_list_of_data_attributes = spark.sql("""
-SELECT distinct(concat(table_catalog, '.', table_schema, '.', table_name)) data_asset_name  FROM system.information_schema.tables
-where table_schema !='information_schema'
-""").collect()
 
-list_of_data_attributes =[]
-for attribute in sql_list_of_data_attributes:
-  list_of_data_attributes.append(attribute.data_asset_name)
+storage_account = dbutils.widgets.get("storage_account")
 
-dbutils.widgets.dropdown("Data Lake Table Asset", "gshen_catalog.customers.customer_data", list_of_data_attributes)
+storage_account_url = f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
 
-table_path = dbutils.widgets.get("Data Lake Table Asset")
-df=spark.read.table(table_path).toPandas()
+df = None
 
-df_profile = ProfileReport(df, minimal=True, title="Profiling Report", progress_bar=False, infer_dtypes=False)
+if data_type == "CSV":
+  f = spark.read.format("csv").options.load(storage_account_url)
+
+if data_type == "DELTA":
+  df = spark.read.format("delta").load(storage_account_url)
+  
+if data_type == "PARQUET":
+  df = spark.read.format("parquet").load(storage_account_url)
+
+if data_type == "JSON":
+  df = spark.read.format("delta").load(storage_account_url)
+
+
+df_profile = ProfileReport(df.toPandas(), minimal=True, title="Profiling Report", progress_bar=True, infer_dtypes=False)
 profile_html = df_profile.to_html()
 
 displayHTML(profile_html)
+
+# COMMAND ----------
+
+
