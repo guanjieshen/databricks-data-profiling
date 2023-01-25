@@ -1,7 +1,37 @@
 # Databricks notebook source
-# MAGIC %md ## Databricks Table Profiling Tool
+# MAGIC %md ## Databricks HMS Profiling Tool
 # MAGIC 
 # MAGIC The following tool can be used to profile Data Lake tables registered to the Databricks Hive Metastore.
+# MAGIC 
+# MAGIC ### How to use this Notebook
+# MAGIC 
+# MAGIC 1. Click `View` on the top left of the notebook, and select `Results Only`
+# MAGIC 
+# MAGIC 1. Select the `Data Profiling Cluster` from the `Cluster dropdown` 
+# MAGIC 
+# MAGIC 1. Select a table using the `Data Lake Table Asset` field.
+# MAGIC 
+# MAGIC 1. Adjust the `Data Sample Ratio` and `Data Profiler Mode` if needed.
+# MAGIC 
+# MAGIC 1. Click the `Run all` button on the top right.
+# MAGIC 
+# MAGIC ### Input Fields
+# MAGIC 
+# MAGIC - __[Data Lake Table Asset]:__ Table to be profiled.
+# MAGIC   - If the table you are looking for does not show up on the dropdown list, run the Notebook first with `default.default` selected.
+# MAGIC 
+# MAGIC 
+# MAGIC - __[Data Profiler Mode]__: Level of profiling.
+# MAGIC 
+# MAGIC   - `Minimal`: Calculates only basic profiling metrics.
+# MAGIC 
+# MAGIC   - `Detailed`: Calculates detailed profiling metrics. Including correlation and interactions. 
+# MAGIC 
+# MAGIC   - `Time Series`: Calculates time-series specific statistics such as PACF and ACF plots. Requires a dataset with a single `timestamp` or `date` column.
+# MAGIC 
+# MAGIC - __[Data Sample Ratio]__: Sampling ratio for profiling. 
+# MAGIC 
+# MAGIC   - Default is `0.1`, which is a 10% sample of the original dataset.
 
 # COMMAND ----------
 

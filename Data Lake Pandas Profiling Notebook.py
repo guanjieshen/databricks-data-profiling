@@ -1,7 +1,21 @@
 # Databricks notebook source
-# MAGIC %md ### Databricks Table Profiling Tool
+# MAGIC %md ## Data Lake Profiling Tool
 # MAGIC 
-# MAGIC The following tool can be used to profile Data Lake tables registered to the Databricks Hive Metastore.
+# MAGIC The following tool can be used to profile Data Lake tables directly within Azure Data Lake Storage.
+# MAGIC 
+# MAGIC ### Input Fields
+# MAGIC 
+# MAGIC __Data Profiler Mode__: Level of profiling.
+# MAGIC 
+# MAGIC `Minimal`[Default]: Calculates only basic profiling metrics.
+# MAGIC 
+# MAGIC `Detailed`: Calculates detailed profiling metrics. Including correlation and interactions. 
+# MAGIC 
+# MAGIC `Time Series`: Calculates time-series specific statistics such as PACF and ACF plots. Requires a dataset with a single `timestamp` or `date` column.
+# MAGIC 
+# MAGIC __Data Sample Ratio__: Sampling ratio for profiling. 
+# MAGIC 
+# MAGIC Default is `0.1`, which is a 10% sample of the original dataset.
 
 # COMMAND ----------
 
@@ -74,6 +88,7 @@ sample_ratio = dbutils.widgets.get("num_sample")
 
 has_header = dbutils.widgets.get("csv_header")
 delimiter = dbutils.widgets.get("csv_delimiter")
+multiline = dbutils.widgets.get("json_multiline")
 
 storage_account_url = (
     f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
@@ -84,9 +99,9 @@ df_spark_reader = None
 if data_type == "CSV":
     df_spark_reader = (
         spark.read.format("csv")
-          .option("inferSchema", "true")
-          .option("header", has_header)
-          .option("delimiter", delimiter)
+        .option("inferSchema", "true")
+        .option("header", has_header)
+        .option("delimiter", delimiter)
     )
 
 if data_type == "DELTA":
@@ -96,7 +111,7 @@ if data_type == "PARQUET":
     df_spark_reader = spark.read.format("parquet")
 
 if data_type == "JSON":
-    df_spark_reader = spark.read.format("json")
+    df_spark_reader = spark.read.option("multiline", multiline).format("json")
 
 df_spark = df_spark_reader.load(storage_account_url)
 # Downsample dataset
