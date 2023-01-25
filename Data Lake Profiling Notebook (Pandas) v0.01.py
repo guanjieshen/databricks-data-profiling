@@ -1,13 +1,17 @@
 # Databricks notebook source
-# MAGIC %md ## Databricks Table Profiling Tool
+# MAGIC %md ### Databricks Table Profiling Tool
 # MAGIC 
 # MAGIC The following tool can be used to profile Data Lake tables registered to the Databricks Hive Metastore.
 
 # COMMAND ----------
 
-# MAGIC %md ### Press the `Run all` to Execute Profiling Tool.
+# MAGIC %md #### Press the `Run all` to Execute Profiling Tool.
 # MAGIC 
 # MAGIC Please do not modify the code below.
+
+# COMMAND ----------
+
+dbutils.widgets.removeAll()
 
 # COMMAND ----------
 
@@ -40,15 +44,14 @@ def convert_columns_decimal_to_long(df):
 
 import pandas as pd
 
-databases = [db.databaseName for db in spark.sql("show databases").collect()]
-tables = [
-    f"{row['database']}.{row['tableName']}"  # <schema>.<table> format
-    for db_rows in [spark.sql(f"show tables in {db}").collect() for db in databases]
-    for row in db_rows
-]
+# Data Lake Location
+dbutils.widgets.text("storage_account", "guanjiestorage", "Data Lake Storage Account")
+dbutils.widgets.text("container", "datasets","Data Lake Storage Container")
+dbutils.widgets.text("directory", "datasets/csv/avacado", "Data Lake Storage Directory")
+dbutils.widgets.dropdown("data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type")
 
-# Table Input
-dbutils.widgets.dropdown("Data Lake Table Asset", "default.lineitems", tables)
+# CSV Settings
+dbutils.widgets.dropdown("header", "True", ["True","False"], "Does CSV have header?")
 
 # Profiling Settings
 dbutils.widgets.dropdown(
@@ -56,17 +59,35 @@ dbutils.widgets.dropdown(
 )
 dbutils.widgets.text("num_sample", "1","Data Sample Ratio")
 
+# COMMAND ----------
+
+storage_account = dbutils.widgets.get("storage_account")
+container = dbutils.widgets.get("container")
+directory = dbutils.widgets.get("directory")
+data_type = dbutils.widgets.get("data_type")
+
 table_path = dbutils.widgets.get("Data Lake Table Asset")
 sample_ratio = dbutils.widgets.get("num_sample")
 
-# Read data from table
-df_spark = spark.read.table(table_path)
+storage_account_url = f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
+
+df = None
+
+if data_type == "CSV":
+  df_spark = spark.read.format("csv").options.load(storage_account_url)
+
+if data_type == "DELTA":
+  df_spark = spark.read.format("delta").load(storage_account_url)
+  
+if data_type == "PARQUET":
+  df_spark = spark.read.format("parquet").load(storage_account_url)
+
+if data_type == "JSON":
+  df_spark = spark.read.format("delta").load(storage_account_url)
+  
+# Downsample dataset
 df_spark_sampled = df_spark.sample(fraction=float(sample_ratio))
 
-# Print Basic Metrics
-count_original = df_spark.count()
-count_sampled = df_spark_sampled.count()
-profiler_mode = dbutils.widgets.get("profiler_mode")
 
 converted_spark_df = (df_spark_sampled
                 .transform(convert_columns_decimal_to_long)
@@ -75,38 +96,28 @@ converted_spark_df = (df_spark_sampled
 # # Convert Spark date columns to Pandas datetime
 df_pd = converted_spark_df.toPandas()
 
-# COMMAND ----------
-
-# MAGIC  %md #### Profiling Details & Sample Data (first 1000 rows)
-
-# COMMAND ----------
-
-print(f"Selected Table: {table_path}")
-print(f"Selected Data Sample Ratio: {sample_ratio}")
-print(f"Selected Data Profile Mode: {profiler_mode}\n")
-
-
-print(f"Number of records before sampling: {count_original}")
-print(f"Number of records after sampling: {count_sampled}\n")
-display(df_spark_sampled)
-
-# COMMAND ----------
-
 # Print Basic Metrics
 count_original = df_spark.count()
 count_sampled = df_spark_sampled.count()
 profiler_mode = dbutils.widgets.get("profiler_mode")
-print(f"Selected Table: {table_path}")
-print(f"Selected Data Sample Ratio: {sample_ratio}")
-print(f"Selected Data Profile Mode: {profiler_mode}\n")
 
 
-print(f"Number of records before sampling: {count_original}")
-print(f"Number of records after sampling: {count_sampled}")
 
 # COMMAND ----------
 
-# MAGIC  %md #### Profiling Results
+print(f"""
+Storage Account: {storage_account}
+Storage Container: {container}
+Storage Directory: {directory}
+Data Type: {data_type}
+
+Selected Data Sample Ratio: {sample_ratio}
+Selected Data Profile Mode: {profiler_mode}
+
+Number of records before sampling: {count_original}
+Number of records after sampling: {count_sampled}
+
+""")
 
 # COMMAND ----------
 
