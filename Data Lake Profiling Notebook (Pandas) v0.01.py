@@ -11,10 +11,6 @@
 
 # COMMAND ----------
 
-dbutils.widgets.removeAll()
-
-# COMMAND ----------
-
 from pyspark.sql.functions import to_timestamp
 
 # Helper Functions
@@ -46,18 +42,27 @@ import pandas as pd
 
 # Data Lake Location
 dbutils.widgets.text("storage_account", "guanjiestorage", "Data Lake Storage Account")
-dbutils.widgets.text("container", "datasets","Data Lake Storage Container")
-dbutils.widgets.text("directory", "datasets/csv/avacado", "Data Lake Storage Directory")
-dbutils.widgets.dropdown("data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type")
+dbutils.widgets.text("container", "datasets", "Data Lake Storage Container")
+dbutils.widgets.text("directory", "profiling/csv/avacado/", "Data Lake Storage Directory")
+dbutils.widgets.dropdown(
+    "data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type"
+)
 
 # CSV Settings
-dbutils.widgets.dropdown("header", "True", ["True","False"], "Does CSV have header?")
+dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
+dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
+
+# JSON Settings
+dbutils.widgets.dropdown("json_multiline", "False", ["True", "False"], "JSON Multi-line")
 
 # Profiling Settings
 dbutils.widgets.dropdown(
-    "profiler_mode", "Minimal", ["Minimal", "Detailed", "Time Series"], "Data Profiler Mode"
+    "profiler_mode",
+    "Minimal",
+    ["Minimal", "Detailed", "Time Series"],
+    "Data Profiler Mode",
 )
-dbutils.widgets.text("num_sample", "1","Data Sample Ratio")
+dbutils.widgets.text("num_sample", "0.1", "Data Sample Ratio")
 
 # COMMAND ----------
 
@@ -65,33 +70,41 @@ storage_account = dbutils.widgets.get("storage_account")
 container = dbutils.widgets.get("container")
 directory = dbutils.widgets.get("directory")
 data_type = dbutils.widgets.get("data_type")
-
-table_path = dbutils.widgets.get("Data Lake Table Asset")
 sample_ratio = dbutils.widgets.get("num_sample")
 
-storage_account_url = f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
+has_header = dbutils.widgets.get("csv_header")
+delimiter = dbutils.widgets.get("csv_delimiter")
 
-df = None
+storage_account_url = (
+    f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
+)
+
+df_spark_reader = None
 
 if data_type == "CSV":
-  df_spark = spark.read.format("csv").options.load(storage_account_url)
+    df_spark_reader = (
+        spark.read.format("csv")
+          .option("inferSchema", "true")
+          .option("header", has_header)
+          .option("delimiter", delimiter)
+    )
 
 if data_type == "DELTA":
-  df_spark = spark.read.format("delta").load(storage_account_url)
-  
+    df_spark_reader = spark.read.format("delta")
+
 if data_type == "PARQUET":
-  df_spark = spark.read.format("parquet").load(storage_account_url)
+    df_spark_reader = spark.read.format("parquet")
 
 if data_type == "JSON":
-  df_spark = spark.read.format("delta").load(storage_account_url)
-  
+    df_spark_reader = spark.read.format("json")
+
+df_spark = df_spark_reader.load(storage_account_url)
 # Downsample dataset
 df_spark_sampled = df_spark.sample(fraction=float(sample_ratio))
 
-
-converted_spark_df = (df_spark_sampled
-                .transform(convert_columns_decimal_to_long)
-                .transform(convert_columns_date_to_timestamp_columns))
+converted_spark_df = df_spark_sampled.transform(
+    convert_columns_decimal_to_long
+).transform(convert_columns_date_to_timestamp_columns)
 
 # # Convert Spark date columns to Pandas datetime
 df_pd = converted_spark_df.toPandas()
@@ -101,7 +114,9 @@ count_original = df_spark.count()
 count_sampled = df_spark_sampled.count()
 profiler_mode = dbutils.widgets.get("profiler_mode")
 
+# COMMAND ----------
 
+# MAGIC  %md #### Profiling Details & Sample Data (first 1000 rows)
 
 # COMMAND ----------
 
@@ -118,6 +133,12 @@ Number of records before sampling: {count_original}
 Number of records after sampling: {count_sampled}
 
 """)
+
+display(df_spark_sampled)
+
+# COMMAND ----------
+
+# MAGIC  %md #### Profiling Results
 
 # COMMAND ----------
 
@@ -136,7 +157,7 @@ if profiler_mode =="Minimal":
              'navbar_show': True,
              'theme':'flatly'}
           }, 
-      title=f"Profiling Report : {table_path}",
+      title=f"Profiling Report : {storage_account_url}",
       progress_bar=True,
       infer_dtypes=False,
   )
@@ -150,7 +171,7 @@ if profiler_mode =="Detailed":
              'navbar_show': True,
              'theme':'flatly'}
           }, 
-      title=f"Profiling Report : {table_path}",
+      title=f"Profiling Report : {storage_account_url}",
       progress_bar=True,
       infer_dtypes=False,
   )
@@ -164,7 +185,7 @@ if profiler_mode =="Time Series":
              'navbar_show': True,
              'theme':'flatly'}
           }, 
-      title=f"Profiling Report : {table_path}",
+      title=f"Profiling Report : {storage_account_url}",
       progress_bar=True,
       infer_dtypes=False,
   )
