@@ -9,10 +9,6 @@
 # MAGIC 
 # MAGIC 1. Select the `Data Profiling Cluster` from the `Cluster dropdown` 
 # MAGIC 
-# MAGIC 1. Select a table using the `Data Lake Table Asset` field.
-# MAGIC 
-# MAGIC 1. Adjust the `Data Sample Ratio` and `Data Profiler Mode` if needed.
-# MAGIC 
 # MAGIC 1. Click the `Run all` button on the top right.
 # MAGIC 
 # MAGIC ### Input Fields
@@ -51,14 +47,14 @@ def str_to_bool(s):
     elif s == "False":
         return False
 
+
 # Convert date to timestamp
 def convert_columns_date_to_timestamp_columns(df):
     for column_name, colmun_type in df.dtypes:
         if colmun_type == "date":
-            df = df.withColumn(
-                column_name, to_timestamp(df[column_name], "yyyy-MM-dd")
-            )
+            df = df.withColumn(column_name, to_timestamp(df[column_name], "yyyy-MM-dd"))
     return df
+
 
 # Convert decimal to long
 def convert_columns_decimal_to_long(df):
@@ -71,6 +67,7 @@ def convert_columns_decimal_to_long(df):
 
 import pandas as pd
 
+# Get list of database & tables
 databases = [db.databaseName for db in spark.sql("show databases").collect()]
 tables = [
     f"{row['database']}.{row['tableName']}"  # <schema>.<table> format
@@ -118,7 +115,7 @@ df_pd = converted_spark_df.toPandas()
 
 # COMMAND ----------
 
-# MAGIC  %md #### Profiling Details & Sample Data (first 1000 rows)
+# MAGIC  %md ### Profiling Details & Sample Data (first 1000 rows)
 
 # COMMAND ----------
 
@@ -137,7 +134,7 @@ display(df_spark_sampled)
 
 # COMMAND ----------
 
-# MAGIC  %md #### Profiling Results
+# MAGIC  %md ### Profiling Results
 
 # COMMAND ----------
 
@@ -192,19 +189,29 @@ if profiler_mode =="Time Series":
 
 # COMMAND ----------
 
+# MAGIC  %md #### Profile Download Link
+
+# COMMAND ----------
+
 from IPython.core.display import display as ip_display, HTML
+import uuid
+
 
 # Export profile to file
-if export_mode == "HTML Download" or export_mode =="Both":
-  file_name = str(uuid.uuid4())[:8]
-  df_profile.to_file(f"/dbfs/FileStore/data_profiles/{file_name}.html")
-  workspaceURL = spark.conf.get("spark.databricks.workspaceUrl")
-  downloadURL = f"/files/data_profiles/{file_name}.html"
-  ip_display(HTML(f"""<a href="{downloadURL}">Download Profiling Report</a>"""))
+if export_mode == "HTML Download" or export_mode == "Both":
+    file_name = str(uuid.uuid4())[:8]
+    df_profile.to_file(f"/dbfs/FileStore/data_profiles/{file_name}.html")
+    workspaceURL = spark.conf.get("spark.databricks.workspaceUrl")
+    downloadURL = f"/files/data_profiles/{file_name}.html"
+    ip_display(HTML(f"""<a href="{downloadURL}">Download Profiling Report</a>"""))
+
+# COMMAND ----------
+
+# MAGIC  %md #### Notebook Profile Report
 
 # COMMAND ----------
 
 # Show profile in notebook
-if export_mode == "Notebook Visual" or export_mode =="Both":
-  profile_html = df_profile.to_html()
-  displayHTML(profile_html)
+if export_mode == "Notebook Visual" or export_mode == "Both":
+    profile_html = df_profile.to_html()
+    displayHTML(profile_html)

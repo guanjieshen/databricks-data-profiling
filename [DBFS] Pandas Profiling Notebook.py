@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %md ## Data Lake Profiling Tool
+# MAGIC %md ## Databricks File System [DBFS] Profiling Tool
 # MAGIC 
 # MAGIC The following tool can be used to profile Data Lake tables directly within Azure Data Lake Storage.
 # MAGIC 
@@ -16,9 +16,7 @@
 # MAGIC 
 # MAGIC ### Input Fields
 # MAGIC 
-# MAGIC - __[Data Lake Storage Account]:__ Azure Data Lake Storage Account Name.
-# MAGIC - __[Data Lake Storage Container]:__ Azure Data Lake Storage Container Name.
-# MAGIC - __[Data Lake Storage Directory]:__ Azure Data Lake Storage Container Name.
+# MAGIC - __[DBFS Location (Spark API Format)]:__ Location of the file in DBFS using the Spark API format.
 # MAGIC 
 # MAGIC - __[Data Profiler Export Mode]:__ Export modes for profile report
 # MAGIC   - `Notebook Visual`: Shows the profile report within the notebook.
@@ -94,12 +92,15 @@ dbutils.widgets.dropdown(
     "Data Profiler Export Mode",
 )
 
-# Data Lake Widgets
-dbutils.widgets.text("storage_account", "guanjiestorage", "Data Lake Storage Account")
-dbutils.widgets.text("container", "datasets", "Data Lake Storage Container")
+# DBFS Widgets
 dbutils.widgets.text(
-    "directory", "profiling/csv/avacado/", "Data Lake Storage Directory"
+    "dbfs_location",
+    "dbfs:/FileStore/guanjie.shen@databricks.com/Monthly_Economic_Indicators.csv",
+    "DBFS Location (Spark API Format)",
 )
+
+
+# Data Type Widget
 dbutils.widgets.dropdown(
     "data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type"
 )
@@ -116,9 +117,8 @@ dbutils.widgets.dropdown(
 # COMMAND ----------
 
 # Get input values
-storage_account = dbutils.widgets.get("storage_account")
-container = dbutils.widgets.get("container")
-directory = dbutils.widgets.get("directory")
+
+dbfs_location = dbutils.widgets.get("dbfs_location")
 data_type = dbutils.widgets.get("data_type")
 sample_ratio = dbutils.widgets.get("num_sample")
 export_mode = dbutils.widgets.get("export_mode")
@@ -128,9 +128,6 @@ has_header = dbutils.widgets.get("csv_header")
 delimiter = dbutils.widgets.get("csv_delimiter")
 multiline = dbutils.widgets.get("json_multiline")
 
-storage_account_url = (
-    f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
-)
 
 df_spark_reader = None
 
@@ -152,7 +149,7 @@ if data_type == "JSON":
     df_spark_reader = spark.read.option("multiline", multiline).format("json")
 
 # Load dataset into Notebook
-df_spark = df_spark_reader.load(storage_account_url)
+df_spark = df_spark_reader.load(dbfs_location)
 
 # Downsample dataset
 df_spark_sampled = df_spark.sample(fraction=float(sample_ratio))
@@ -176,9 +173,7 @@ count_sampled = df_spark_sampled.count()
 
 print(
     f"""
-Storage Account: {storage_account}
-Storage Container: {container}
-Storage Directory: {directory}
+DBFS Location: {dbfs_location}
 Data Type: {data_type}
 
 Selected Data Sample Ratio: {sample_ratio}
@@ -209,7 +204,7 @@ if profiler_mode == "Minimal":
         df_pd,
         minimal=True,
         html={"style": {"full_width": True, "navbar_show": True, "theme": "flatly"}},
-        title=f"Profiling Report : {storage_account_url}",
+        title=f"Profiling Report : {dbfs_location}",
         progress_bar=True,
         infer_dtypes=False,
     )
@@ -219,7 +214,7 @@ if profiler_mode == "Detailed":
         df_pd,
         minimal=False,
         html={"style": {"full_width": True, "navbar_show": True, "theme": "flatly"}},
-        title=f"Profiling Report : {storage_account_url}",
+        title=f"Profiling Report : {dbfs_location}",
         progress_bar=True,
         infer_dtypes=False,
     )
@@ -229,7 +224,7 @@ if profiler_mode == "Time Series":
         df_pd,
         tsmode=True,
         html={"style": {"full_width": True, "navbar_show": True, "theme": "flatly"}},
-        title=f"Profiling Report : {storage_account_url}",
+        title=f"Profiling Report : {dbfs_location}",
         progress_bar=True,
         infer_dtypes=False,
     )
