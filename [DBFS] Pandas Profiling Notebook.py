@@ -16,7 +16,7 @@
 # MAGIC 
 # MAGIC ### Input Fields
 # MAGIC 
-# MAGIC - __[DBFS Location (Spark API Format)]:__ Location of the file in DBFS using the Spark API format.
+# MAGIC - __[DBFS Location (Spark API Format)]__: Location of the file in DBFS using the Spark API format.
 # MAGIC 
 # MAGIC - __[Data Profiler Export Mode]:__ Export modes for profile report
 # MAGIC   - `Notebook Visual`: Shows the profile report within the notebook.
@@ -38,6 +38,11 @@
 # MAGIC - __[Data Sample Ratio]__: Sampling ratio for profiling. 
 # MAGIC 
 # MAGIC   - Default is `0.1`, which is a 10% sample of the original dataset.
+# MAGIC   
+# MAGIC - __[Data Type]:__ Type of data to be profiled. Supported formats: CSV, Parquet, Delta, JSON
+# MAGIC - __[CSV Header]:__ Does the CSV have a header as the first row?
+# MAGIC - __[CSV Delimiter]:__ What is the delimiter for the CSV file?
+# MAGIC - __[JSON Multi-line]:__ Does the JSON for a single object span multiple lines?
 
 # COMMAND ----------
 
@@ -105,29 +110,40 @@ dbutils.widgets.dropdown(
     "data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type"
 )
 
-# CSV Settings
-dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
-dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
-
-# JSON Settings
-dbutils.widgets.dropdown(
-    "json_multiline", "False", ["True", "False"], "JSON Multi-line"
-)
 
 # COMMAND ----------
 
 # Get input values
-
 dbfs_location = dbutils.widgets.get("dbfs_location")
-data_type = dbutils.widgets.get("data_type")
 sample_ratio = dbutils.widgets.get("num_sample")
 export_mode = dbutils.widgets.get("export_mode")
 profiler_mode = dbutils.widgets.get("profiler_mode")
+data_type = dbutils.widgets.get("data_type")
 
-has_header = dbutils.widgets.get("csv_header")
-delimiter = dbutils.widgets.get("csv_delimiter")
-multiline = dbutils.widgets.get("json_multiline")
+# Remove Optional Widgets
+try:
+  dbutils.widgets.remove("csv_header")
+  dbutils.widgets.remove("csv_delimiter")
+except:
+  pass
 
+try:
+  dbutils.widgets.remove("json_multiline")
+except:
+  pass
+
+# CSV Settings
+if data_type == "CSV":
+  dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
+  dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
+
+# JSON Settings
+if data_type == "JSON":
+  dbutils.widgets.dropdown(
+      "json_multiline", "False", ["True", "False"], "JSON Multi-line"
+  )
+
+# COMMAND ----------
 
 df_spark_reader = None
 
