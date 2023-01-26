@@ -122,26 +122,29 @@ data_type = dbutils.widgets.get("data_type")
 
 # Remove Optional Widgets
 try:
-  dbutils.widgets.remove("csv_header")
-  dbutils.widgets.remove("csv_delimiter")
+    dbutils.widgets.remove("csv_header")
+    dbutils.widgets.remove("csv_delimiter")
 except:
-  pass
+    pass
 
 try:
-  dbutils.widgets.remove("json_multiline")
+    dbutils.widgets.remove("json_multiline")
 except:
-  pass
+    pass
 
 # CSV Settings
 if data_type == "CSV":
-  dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
-  dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
+    dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
+    dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
+    has_header = dbutils.widgets.get("csv_header")
+    delimiter = dbutils.widgets.get("csv_delimiter")
 
 # JSON Settings
 if data_type == "JSON":
-  dbutils.widgets.dropdown(
-      "json_multiline", "False", ["True", "False"], "JSON Multi-line"
-  )
+    dbutils.widgets.dropdown(
+        "json_multiline", "False", ["True", "False"], "JSON Multi-line"
+    )
+    multiline = dbutils.widgets.get("multiline")
 
 # COMMAND ----------
 

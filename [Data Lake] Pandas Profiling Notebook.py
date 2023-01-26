@@ -104,14 +104,6 @@ dbutils.widgets.dropdown(
     "data_type", "CSV", ["CSV", "DELTA", "PARQUET", "JSON"], "Data Type"
 )
 
-# CSV Settings
-dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
-dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
-
-# JSON Settings
-dbutils.widgets.dropdown(
-    "json_multiline", "False", ["True", "False"], "JSON Multi-line"
-)
 
 # COMMAND ----------
 
@@ -124,9 +116,34 @@ sample_ratio = dbutils.widgets.get("num_sample")
 export_mode = dbutils.widgets.get("export_mode")
 profiler_mode = dbutils.widgets.get("profiler_mode")
 
-has_header = dbutils.widgets.get("csv_header")
-delimiter = dbutils.widgets.get("csv_delimiter")
-multiline = dbutils.widgets.get("json_multiline")
+
+# Remove Optional Widgets
+try:
+  dbutils.widgets.remove("csv_header")
+  dbutils.widgets.remove("csv_delimiter")
+except:
+  pass
+
+try:
+  dbutils.widgets.remove("json_multiline")
+except:
+  pass
+
+# CSV Settings
+if data_type == "CSV":
+    dbutils.widgets.dropdown("csv_header", "True", ["True", "False"], "CSV Header")
+    dbutils.widgets.text("csv_delimiter", ",", "CSV Delimiter?")
+    has_header = dbutils.widgets.get("csv_header")
+    delimiter = dbutils.widgets.get("csv_delimiter")
+
+# JSON Settings
+if data_type == "JSON":
+    dbutils.widgets.dropdown(
+        "json_multiline", "False", ["True", "False"], "JSON Multi-line"
+    )
+    multiline = dbutils.widgets.get("multiline")
+
+# COMMAND ----------
 
 storage_account_url = (
     f"abfss://{container}@{storage_account}.dfs.core.windows.net/{directory}"
@@ -200,7 +217,7 @@ display(df_spark_sampled)
 
 from pandas_profiling import ProfileReport
 
-profiler_mode = dbutils.widgets.get("profiler_mode")
+
 
 df_profile = None
 
