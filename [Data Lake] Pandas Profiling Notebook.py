@@ -18,7 +18,7 @@
 # MAGIC 
 # MAGIC - __[Data Lake Storage Account]:__ Azure Data Lake Storage Account Name.
 # MAGIC - __[Data Lake Storage Container]:__ Azure Data Lake Storage Container Name.
-# MAGIC - __[Data Lake Storage Directory]:__ Azure Data Lake Storage Container Name.
+# MAGIC - __[Data Lake Storage Directory]:__ Azure Data Lake Storage Directory Name.
 # MAGIC 
 # MAGIC - __[Data Profiler Export Mode]:__ Export modes for profile report
 # MAGIC   - `Notebook Visual`: Shows the profile report within the notebook.
