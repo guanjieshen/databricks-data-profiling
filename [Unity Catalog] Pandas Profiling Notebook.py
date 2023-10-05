@@ -1,6 +1,37 @@
 # Databricks notebook source
+# MAGIC %pip install ydata-profiling==4.4.0
+
+# COMMAND ----------
+
+df = spark.read.table("gshen_catalog.customers.customer_data")
+
+# COMMAND ----------
+
+from ydata_profiling import ProfileReport
+
+report = ProfileReport(df,
+                title='gshen_catalog.customers.customer_data',
+                infer_dtypes=False,
+                interactions=None,
+                missing_diagrams=None,
+                correlations={"auto": {"calculate": False},
+                              "pearson": {"calculate": True},
+                              "spearman": {"calculate": True}})
+
+# COMMAND ----------
+
+dict_plot = report.summarizer
+print(dict_plot)
+
+# COMMAND ----------
+
+report_html = report.to_html()
+displayHTML(report_html)
+
+# COMMAND ----------
+
 # MAGIC %md ### Databricks Table Profiling Tool
-# MAGIC 
+# MAGIC
 # MAGIC The following tool can be used to profile Data Lake tables registered to the Databricks Unity Catalog Metastore.
 
 # COMMAND ----------
